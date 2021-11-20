@@ -1,12 +1,9 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const logger = require('tracer').colorConsole();
 const CONFIG = require("./config/config");
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static('public'));
 app.use(cors({ origin: CONFIG.REACT_URL, credentials: true }));
@@ -30,12 +27,59 @@ app.get('/healthcheck', (request, response) => {
 
 app.get('/data', async (request, response) => {
   try {
-    const query = 'select * from BALANCE';
+    const {
+      table,
+      yearFrom,
+      yearTo,
+      country
+    } = request.query;
+    const query = `SELECT Year as year, ${country} as country, ${country}_Annotation_Title as title, ${country}_Annotation_Text as text FROM ${table} where Year between ${yearFrom} and ${yearTo} and ${country} IS NOT NULL;`;
     const rows = await pool.query(query);
-    return response.json(rows).status(200);
+    let resp = rows.map(function (el) {
+      return [el.year, el.country, el.title == null ? "" : el.title, el.text == null ? "" : el.text];
+    });
+    return response.json(resp).status(200);
   } catch (ex) {
     logger.error(JSON.stringify(ex));
-    const message = ex.message ? ex.message : 'Error while uploading image';
+    const message = ex.message ? ex.message : 'Error while fetching data';
+    const code = ex.statusCode ? ex.statusCode : 500;
+    return response.status(code).json({ message });
+  }
+});
+
+app.post('/annotation', async (request, response) => {
+  try {
+    const {
+      table,
+      year,
+      country,
+      title,
+      text
+    } = request.body;
+    const query = `UPDATE ${table} SET ${country}_Annotation_Title = "${title}", ${country}_Annotation_Text = "${text}" where Year=${year};`;
+    const rows = await pool.query(query);
+    return response.json({ "message": "success" }).status(200);
+  } catch (ex) {
+    logger.error(JSON.stringify(ex));
+    const message = ex.message ? ex.message : 'Error while updating annotation';
+    const code = ex.statusCode ? ex.statusCode : 500;
+    return response.status(code).json({ message });
+  }
+});
+
+app.get('/load', async (request, response) => {
+  try {
+    const tables = await pool.query("show tables");
+    let resp = {};
+    for (const table of tables) {
+      const query = `SELECT * from ${table["Tables_in_HACKATHON"]};`;
+      const rows = await pool.query(query);
+      resp[table["Tables_in_HACKATHON"]] = rows;
+    }
+    return response.json(resp).status(200);
+  } catch (ex) {
+    logger.error(JSON.stringify(ex));
+    const message = ex.message ? ex.message : 'Error while fetching data';
     const code = ex.statusCode ? ex.statusCode : 500;
     return response.status(code).json({ message });
   }
