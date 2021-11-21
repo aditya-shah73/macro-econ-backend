@@ -85,8 +85,8 @@ app.get('/load', async (request, response) => {
   }
 });
 
-app.listen(8080, () => {
-  logger.debug('App listening on port 8080');
+app.listen(process.env.PORT || 3000, () => {
+  logger.debug('App listening on port 3000');
 });
 
 module.exports = app;
