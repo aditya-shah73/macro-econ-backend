@@ -78,13 +78,23 @@ app.post('/annotation', async (request, response) => {
 app.get('/load', async (request, response) => {
   try {
     const tables = await pool.query("show tables");
+    let res = {};
     let resp = {};
     for (const table of tables) {
       const query = `SELECT * from ${table["Tables_in_HACKATHON"]};`;
       const rows = await pool.query(query);
       resp[table["Tables_in_HACKATHON"]] = rows;
     }
-    return response.json(resp).status(200);
+    res.tables = resp;
+    const anno_query = `SELECT * from ANNOTATIONS;`;
+    const anno_rows = await pool.query(anno_query);
+    if (anno_rows.length > 0) {
+      res.annotations = anno_rows;
+    } else {
+      res.annotations = []
+    }
+
+    return response.json(res).status(200);
   } catch (ex) {
     logger.error(JSON.stringify(ex));
     const message = ex.message ? ex.message : 'Error while fetching data';
