@@ -109,7 +109,6 @@ app.post('/annotation', async (request, response) => {
   try {
     console.log(request.body)
     for (let annot of request.body) {
-      // let props = annotation;
       const {
         table_name,
         country,
@@ -128,7 +127,7 @@ app.post('/annotation', async (request, response) => {
   }
 });
 
-app.listen(process.env.PORT || 8080, () => {
+app.listen(process.env.PORT || 3000, () => {
   logger.debug('App listening on port 3000');
 });
 
