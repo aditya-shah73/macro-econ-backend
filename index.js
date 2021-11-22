@@ -33,7 +33,8 @@ app.get('/data', async (request, response) => {
       table,
       yearFrom,
       yearTo,
-      country
+      country,
+      user
     } = request.query;
     const query = `SELECT Year as year, ${country} as country FROM ${table} where Year between ${yearFrom} and ${yearTo} and ${country} IS NOT NULL;`;
     const rows = await pool.query(query);
@@ -41,7 +42,7 @@ app.get('/data', async (request, response) => {
     resp.rows = rows.map(function (el) {
       return [el.year, el.country];
     });
-    const anno_query = `SELECT annotation from ANNOTATIONS where table_name="${table}" and country="${country}";`;
+    const anno_query = `SELECT annotation from ANNOTATIONS where table_name="${table}" and country="${country}" and user="${user}";`;
     const anno_rows = await pool.query(anno_query);
     if (anno_rows.length > 0) {
       resp.annotation = anno_rows[0]["annotation"];
@@ -57,14 +58,15 @@ app.get('/data', async (request, response) => {
   }
 });
 
-app.post('/annotation', async (request, response) => {
+app.post('/annotations', async (request, response) => {
   try {
     const {
       table,
       country,
-      text
+      text,
+      user
     } = request.body;
-    const query = `REPLACE INTO ANNOTATIONS(table_name, country, annotation) values("${table}","${country}","${text}");`
+    const query = `REPLACE INTO ANNOTATIONS(table_name, country,user, annotation) values("${table}","${country}","${user}","${text}");`
     const rows = await pool.query(query);
     return response.json({ "message": "success" }).status(200);
   } catch (ex) {
@@ -103,7 +105,30 @@ app.get('/load', async (request, response) => {
   }
 });
 
-app.listen(process.env.PORT || 3000, () => {
+app.post('/annotation', async (request, response) => {
+  try {
+    console.log(request.body)
+    for (let annot of request.body) {
+      // let props = annotation;
+      const {
+        table_name,
+        country,
+        annotation,
+        user
+      } = annot;
+      const query = `REPLACE INTO ANNOTATIONS(table_name, country,user, annotation) values("${table_name}","${country}","${user}","${annotation}");`
+      const rows = await pool.query(query);
+    }
+    return response.json({ "message": "success" }).status(200);
+  } catch (ex) {
+    logger.error(ex.message);
+    const message = ex.message ? ex.message : 'Error while updating annotation';
+    const code = ex.statusCode ? ex.statusCode : 500;
+    return response.status(code).json({ message });
+  }
+});
+
+app.listen(process.env.PORT || 8080, () => {
   logger.debug('App listening on port 3000');
 });
 
